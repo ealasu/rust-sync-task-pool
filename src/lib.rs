@@ -13,7 +13,7 @@
 #![feature(unsafe_destructor)]
 
 use std::thread::Thread;
-use std::comm::{sync_channel, SyncSender, Receiver};
+use std::sync::mpsc::{sync_channel, SyncSender, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thunk::Thunk;
 
@@ -53,6 +53,7 @@ impl<'a> Drop for Sentinel<'a> {
 /// # Example
 ///
 /// ```rust
+/// # use std::sync::mpsc::channel;
 /// # use std::sync::TaskPool;
 /// # use std::iter::AdditiveIterator;
 ///
@@ -62,7 +63,7 @@ impl<'a> Drop for Sentinel<'a> {
 /// for _ in range(0, 8u) {
 ///     let tx = tx.clone();
 ///     pool.execute(move|| {
-///         tx.send(1u);
+///         tx.send(1u).unwrap();
 ///     });
 /// }
 ///
@@ -100,7 +101,7 @@ impl TaskPool {
     pub fn execute<F>(&self, job: F)
         where F : FnOnce(), F : Send
     {
-        self.jobs.send(Thunk::new(job));
+        self.jobs.send(Thunk::new(job)).unwrap();
     }
 }
 
@@ -114,7 +115,7 @@ fn spawn_in_pool(jobs: Arc<Mutex<Receiver<Thunk>>>) {
                 // Only lock jobs for the time it takes
                 // to get a job, not run it.
                 let lock = jobs.lock().unwrap();
-                lock.recv_opt()
+                lock.recv()
             };
 
             match message {
@@ -132,7 +133,7 @@ fn spawn_in_pool(jobs: Arc<Mutex<Receiver<Thunk>>>) {
 #[cfg(test)]
 mod test {
     use super::TaskPool;
-    use std::comm::channel;
+    use std::sync::mpsc::channel;
     use std::iter::range;
 
     const TEST_TASKS: uint = 4u;
@@ -147,7 +148,7 @@ mod test {
         for _ in range(0, TEST_TASKS) {
             let tx = tx.clone();
             pool.execute(move|| {
-                tx.send(1u);
+                tx.send(1u).unwrap();
             });
         }
 
@@ -176,7 +177,7 @@ mod test {
         for _ in range(0, TEST_TASKS) {
             let tx = tx.clone();
             pool.execute(move|| {
-                tx.send(1u);
+                tx.send(1u).unwrap();
             });
         }
 
