@@ -1,0 +1,7 @@
+[package]
+name = "sync_task_pool"
+version = "0.0.1"
+authors = ["eman <e@m.an>"]
+
+[lib]
+name = "sync_task_pool"
